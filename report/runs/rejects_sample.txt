@@ -1,0 +1,7 @@
+drive_id  ts                                reject_reason  speed_mps  _batch_id     _row_no
+--------  --------------------------------  -------------  ---------  ------------  -------
+drive_a   2025-10-07 08:01:01.814000+00:00  duplicate      0.614      17f098d6bbb1  622    
+drive_a   2025-10-07 08:01:59.985000+00:00  speed_missing             17f098d6bbb1  1208   
+drive_a   2025-10-07 08:02:00.194000+00:00  speed_missing             17f098d6bbb1  1210   
+drive_a   2025-10-07 08:02:01.218000+00:00  speed_missing             17f098d6bbb1  1220   
+drive_a   2025-10-07 08:02:02.106000+00:00  speed_missing             17f098d6bbb1  1229   

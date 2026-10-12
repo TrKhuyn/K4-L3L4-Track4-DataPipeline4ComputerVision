@@ -34,12 +34,23 @@ Lượt nạp lặp A báo `already present`; số dòng vẫn là A **3021**, B
 ### Câu 2
 Pipeline đưa hai nguồn về một schema như thế nào (đơn vị, kiểu thời gian, **độ lệch đồng hồ**)? Bằng chứng nào trong kết quả bước 2 cho thấy đã đúng? Dán bảng quarantine của bạn (số dòng theo từng lý do, từng drive) và giải thích vì sao dòng lỗi vào `rejects` thay vì bị xoá.
 
-(trả lời ở đây)
+`stg_telemetry_a` chuyển ISO UTC thành `timestamptz`, giữ tốc độ m/s; `stg_telemetry_b` đổi tên cột, chia km/h cho **3,6**, chia bàn đạp phần trăm cho **100**, lấy `(timestamp_ms - 1500) / 1000` rồi `to_timestamp`. Tốc độ rỗng được chuyển thành NULL bằng `nullif` và `try_cast`, sau đó phân loại trước khi đưa vào bảng sạch.
+
+[Bước 2](report/runs/step2.txt) cho A **2968** dòng sạch, B **3181**; thời điểm đầu B là **2025-10-08 14:30:00.009 UTC**, chỉ sau video **9 ms**, thay vì 1509 ms. Tốc độ lớn nhất sau chuẩn hóa lần lượt khoảng **71** và **100 km/h**; module 2 đạt **7/7**.
+
+| Drive | duplicate | speed_missing | speed_out_of_range | Tổng rejects | Sạch + rejects = thô |
+|---|---:|---:|---:|---:|---:|
+| drive_a | 20 | 30 | 3 | 53 | 2968 + 53 = 3021 |
+| drive_b | 20 | 30 | 3 | 53 | 3181 + 53 = 3234 |
+
+`silver.silver_telemetry_rejects` giữ timestamp, lý do, `_batch_id` và `_row_no` ([mẫu rejects](report/runs/rejects_sample.txt)); bản Delta ở `silver/delta/telemetry_rejects/`. Cách ly giữ dấu vết để tìm lỗi cảm biến hoặc sửa luật và xử lý lại, đồng thời đối soát đủ **6255** dòng đầu vào = **6149** sạch + **106** rejects.
 
 ### Câu 3
 Vì sao test `max_gap_ms` là `warn` còn `in_range` là `error`? Kết quả thí nghiệm `break-gate` của bạn (`break_gate.json`): test nào bắt được, bao nhiêu dòng, và điều đó cho biết gì về vai trò của "cổng chất lượng"?
 
-(trả lời ở đây)
+`max_gap_ms` cảnh báo khi khoảng cách giữa hai mẫu cùng drive vượt **1000 ms**: mất tín hiệu là lỗi đã biết, cần điều tra nhưng vẫn có thể dùng các khoảng còn tốt. `in_range` mặc định là `error`, yêu cầu tốc độ **0–70 m/s**; dữ liệu vượt miền hợp lệ sẽ làm sai nhãn huấn luyện nên phải chặn bước sau.
+
+[break_gate.json](report/evidence/break_gate.json) ghi việc nới luật làm sạch lên **1000 m/s**: test **`in_range_silver_telemetry_speed_mps__70__0`** bắt **6 dòng**, kết quả **PASS=5 WARN=1 ERROR=1 SKIP=0**. Sau khi script khôi phục luật gốc, kết quả là **PASS=6 WARN=1 ERROR=0 SKIP=0**. Cổng kiểm tra độc lập đã bắt được lỗi dù bước biến đổi vẫn chạy thành công; trong DAG, task test lỗi ngăn Gold và các bước xuất dữ liệu chạy tiếp.
 
 ## Bước 3 · Silver frames
 
