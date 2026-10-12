@@ -13,8 +13,8 @@ MSSV có chữ `A`, nên lệnh `int(MSSV)` trong GUIDE không áp dụng trực
 
 ## Kết quả cuối
 
-- `dataset_version` của bạn: `<điền>`  (phải khớp `report/evidence/run_summary.json`)
-- Số khung hình train / val / test của bạn: `<điền>`
+- `dataset_version` của bạn: `00c5f985d775` (đối chiếu `report/evidence/run_summary.json`).
+- Số khung hình train / val / test của bạn: **781 / 129 / 109**, tổng **1019**; số trip **18 / 4 / 4**, tổng **26**.
 - `report/verify.txt`: tạo bằng `python3 scripts/check_submission.py --save-verify` (phải có `27/27 checks passed`).
 - Ảnh chụp trong `report/screenshots/`: `airflow_graph.png`, `minio_lake.png`, `metabase_dashboard.png`, và ảnh bài tập sập/chạy lại (log task đỏ thấy trip của bạn).
 
@@ -79,12 +79,14 @@ Khung **đen** có brightness **<12**, bị loại ở Gold; khung **tối** có
 ### Câu 6
 Dựa vào `leakage.json`: chia theo khung hình làm bao nhiêu trip bị chia cắt, so với chia theo trip? Vì sao điều này làm điểm kiểm thử đẹp một cách giả tạo?
 
-(trả lời ở đây)
+[leakage.json](report/evidence/leakage.json) thử **1019 frame** từ **26 trip**: chia bằng hash từng frame làm **26/26 trip** nằm ở nhiều split, và cả **26** có frame trong train lẫn test. Gold chia theo trip có **0 trip** bị chia cắt. Các ảnh liền nhau cách khoảng 0,5 giây thường cùng cảnh, vật thể và góc camera; mô hình đã thấy cảnh gần giống trong train có thể đạt điểm test cao mà chưa tổng quát hóa sang chuyến khác. Chia theo trip giảm rò rỉ này; vẫn cần kiểm tra các trip khác nhau có đi qua cùng cảnh hay không.
 
 ### Câu 7
 Vì sao `dataset_version` là **băm nội dung** chứ không phải ngày giờ hay số đếm? Hai lần chạy liên tiếp cho kết quả gì? Vì sao `dataset_version` của bạn **khác** bạn bè dù cùng dữ liệu (liên hệ MSSV)?
 
-(trả lời ở đây)
+[Bước 4](report/runs/step4.txt) và [export lần hai](report/runs/export_repeat.txt) đều cho **`00c5f985d775`**, **1019 frame**, split **781/129/109**; không trip nào ở hai split, module 4 đạt **7/7**. SHA256 nội dung cho phép nhận diện cùng tập frame và cách chia khi chạy lại, thay vì tạo tên mới chỉ vì thời gian chạy đổi.
+
+Cụ thể, `publish.export_dataset` sắp xếp theo `frame_id`, băm các dòng `frame_id|split`, lấy **12 ký tự hex** đầu; version này không băm toàn bộ byte ảnh, telemetry hoặc lineage. MSSV `2A202602682` được nối với `trip_id` trong phép md5 để xếp trip trong từng drive, nên MSSV khác thường tạo thứ tự, split và version khác; không phải cam kết mọi MSSV luôn khác version. A có train/val/test **334/57/45**, B **447/72/64**, mỗi drive có **9/2/2 trip**. Lineage và manifest cần được lưu cùng version để biết chính xác nguồn và quy tắc tạo dataset.
 
 ### Câu 8
 Đọc phần `lineage` trong `manifest.json` của dataset bạn. Trả lời "dataset này được tạo từ dữ liệu nào?" bằng chính nội dung đó. Nếu một người hỏi 3 tháng sau, thông tin nào giúp tái tạo lại đúng dataset này?
