@@ -57,18 +57,22 @@ Vì sao test `max_gap_ms` là `warn` còn `in_range` là `error`? Kết quả th
 ### Câu 4
 Dựa vào `idempotency.json`: số dòng trước và sau hai lần chạy lại, và khi ghi kiểu `append`. Vì sao Delta `overwrite` theo partition (một trip) an toàn hơn xoá rồi ghi lại, nhất là khi giữa chừng có lỗi?
 
-(trả lời ở đây)
+[idempotency.json](report/evidence/idempotency.json) thử **`trip-00003`**, có **60 frame**. Toàn bảng trước và sau hai lần chạy lại đều **1246 dòng**, dấu vân tay đều **`6c7480dfde7e`** (`unchanged=true`). Bảng thử dùng append hai lần có **120 dòng**, tức gấp **2** số frame thực của trip. [Unit test](report/runs/unit_tests.txt) đạt **9/9**, module 3 đạt **6/6**.
+
+Pipeline ghi Delta `overwrite` với predicate `trip_id = ...`, thay tập dòng của một trip trong một commit thay vì xóa các dòng cũ rồi ghi mới bằng hai thao tác rời. Nếu ghi thất bại trước commit, người đọc vẫn thấy snapshot cũ; tránh khoảng trống hoặc tập dòng dở dang do xóa trước. Bảng được partition vật lý theo `drive_id`, còn phạm vi thay thế logic là một trip. File JPG được ghi trước commit Delta nên vẫn có thể có file chưa được bảng tham chiếu nếu lỗi; tính nguyên tử này áp dụng cho bảng, không cho mọi object S3 cùng lúc.
 
 ### Câu 5
 Khung hình **đen** và khung hình **tối** khác nhau thế nào, pipeline xử lý khác nhau ra sao, bạn có đồng ý không? Dựa vào `threshold.json`: nếu chọn ngưỡng 0, 2, 6 thì bao nhiêu khung bị coi là trùng ở mỗi drive? Bạn chọn ngưỡng nào, vì sao, và ngưỡng đó phụ thuộc vào tốc độ xe thế nào?
 
 | dHash khác tối đa | số khung trùng, drive A | số khung trùng, drive B |
 |---|---|---|
-| 0 | | |
-| 2 | | |
-| 6 | | |
+| 0 | 61 | 8 |
+| 2 | 149 | 53 |
+| 6 | 363 | 244 |
 
-(trả lời ở đây)
+[threshold.json](report/evidence/threshold.json) cho thấy ngưỡng tăng từ 0 lên 6 làm số frame trùng tăng mạnh; tôi giữ **2 bit** để bắt khung gần như không đổi nhưng tránh loại quá nhiều thay đổi nhỏ có ích. dHash là tín hiệu hình ảnh, không chứng minh được camera đứng hình: khi xe chậm hoặc đứng yên, cảnh hợp lệ cũng có thể gần trùng; khi xe nhanh, cảnh đổi nhiều, ngưỡng lớn có thể loại nhầm frame khác nhau. Nên kiểm tra ảnh và chuyển động, không dùng một ngưỡng chung như kết luận tuyệt đối.
+
+Khung **đen** có brightness **<12**, bị loại ở Gold; khung **tối** có brightness **từ 12 đến dưới 40**, chỉ được gắn `is_dark`. Tôi đồng ý giữ điều kiện thiếu sáng thực tế để dataset không thiên lệch về ban ngày, nhưng vẫn loại nếu frame đồng thời mờ, trùng hoặc mất đồng bộ. [Bước 3](report/runs/step3.txt): A có **602** frame, **6** đen, **9** mờ, **4** tối, **149** gần trùng, **7** mất đồng bộ; B có **644**, tương ứng **4**, **0**, **61**, **53**, **7**. Các cờ chồng lấn nên không cộng chúng để tính số bị loại. Gap ASOF trung bình A/B **66/73 ms**, lớn nhất **2884/3112 ms**: telemetry dùng là mẫu mới nhất trước hoặc đúng event time, không phải mẫu gần nhất ở cả hai phía.
 
 ## Bước 4 · Gold
 
