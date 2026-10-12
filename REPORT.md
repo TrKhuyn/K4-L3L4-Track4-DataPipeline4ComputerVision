@@ -7,7 +7,9 @@
 | Họ và tên | Trần Ngọc Khuyến |
 | MSSV (đúng bằng `LAB_STUDENT_ID` trong `.env`) | `2A202602682` |
 | GitHub | TrKhuyn |
-| Trip dùng cho bài tập sập và chạy lại (xem GUIDE, bước 5) | `<điền: trip-xxxxx>` |
+| Trip dùng cho bài tập sập và chạy lại (xem GUIDE, bước 5) | `trip-07774` |
+
+MSSV có chữ `A`, nên lệnh `int(MSSV)` trong GUIDE không áp dụng trực tiếp. Riêng việc chọn trip lỗi dùng phần chữ số `2202602682 % 26 = 20`, lấy phần tử thứ 20 (chỉ số từ 0) trong danh sách trip đã sắp xếp. `LAB_STUDENT_ID` vẫn giữ nguyên `2A202602682` khi chia train/val/test.
 
 ## Kết quả cuối
 
@@ -21,7 +23,11 @@
 ### Câu 1
 Liệt kê **ít nhất 4 khác biệt** giữa telemetry nguồn A và nguồn B mà bạn thấy ở bronze. Vì sao pipeline giữ **mỗi nguồn một bảng bronze** và để mọi cột ở dạng chữ, thay vì gộp và ép kiểu ngay?
 
-(trả lời ở đây)
+Quan sát [log bước 1](report/runs/step1.txt): A có `ts_utc` dạng ISO UTC (`2025-10-07T08:00:00.014Z`), B có `timestamp_ms` dạng epoch ms (`1759933801509`). A dùng `speed_mps` theo m/s, B dùng `spd_kmh` theo km/h; `gas`/`brake` của A là tỷ lệ 0–1, còn `throttle_pct`/`brake_pct` của B là phần trăm. Các cột còn đổi tên: `heading_deg` → `hdg`, `lat`/`lon` → `latitude`/`longitude`, `acc_x`/`acc_y` → `ax`/`ay`, `steer` → `steering`. Đồng hồ B chạy trước video 1500 ms, A không lệch.
+
+Bronze giữ hai schema nguồn riêng tại `bronze.raw_telemetry_a` và `bronze.raw_telemetry_b`; các cột CSV giữ dạng chữ, kể cả ô rỗng, giúp giữ nguyên giá trị lỗi để truy nguyên và xử lý lại bằng quy tắc Silver. Video thô ở `bronze/video/<drive>/raw.mp4`, metadata trong `bronze.video_files`, trip trong `bronze.trips_raw`, bảng Delta ở `bronze/delta/`.
+
+Lượt nạp lặp A báo `already present`; số dòng vẫn là A **3021**, B **3234**, video **2**, trip **26**. [Lịch sử Delta A](report/runs/bronze_history.txt) chỉ có **một commit**, version **0**, thêm 3021 dòng. File được nhận diện bằng SHA256, nên chạy lại không nhân đôi dữ liệu; module 1 đạt **5/5**.
 
 ## Bước 2 · Silver telemetry
 

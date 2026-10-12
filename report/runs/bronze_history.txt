@@ -1,0 +1,1 @@
+[{"version": 0, "operation": "WRITE", "rows_added": 3021, "predicate": null}]

@@ -1,0 +1,4 @@
+drive_id  telemetry_clock_offset_ms  sha256                                  
+--------  -------------------------  ----------------------------------------
+drive_b   1500                       bfa62703f645ff77a8578ae3fc74a00881140d38
+drive_a   0                          636ba1a98dfc5ba665d1c935e1d2064e69f4df36
