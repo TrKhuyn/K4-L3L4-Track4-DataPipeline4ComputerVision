@@ -1,6 +1,6 @@
 # REPORT — Lab Day 9
 
-> Điền **bằng lời và số liệu của chính bạn** (lấy từ đầu ra của `scripts/lab.sh step ...` và từ `report/evidence/*.json`). Bài làm công khai trên GitHub; giảng viên đối chiếu với lịch sử commit và với bài của các bạn khác. Mỗi câu 3 đến 8 dòng là đủ.
+> Kết quả chạy thực tế trên Docker Desktop, Windows, ngày **12/10/2026**. Lượt cuối hoàn tất lúc **20:31 (UTC+7)**. Số liệu được đối chiếu với log trong `report/runs/` và JSON trong `report/evidence/`; cách chạy trực tiếp từ PowerShell ở [REPRODUCE.md](report/REPRODUCE.md).
 
 | | |
 |---|---|
@@ -15,8 +15,8 @@ MSSV có chữ `A`, nên lệnh `int(MSSV)` trong GUIDE không áp dụng trực
 
 - `dataset_version` của bạn: `00c5f985d775` (đối chiếu `report/evidence/run_summary.json`).
 - Số khung hình train / val / test của bạn: **781 / 129 / 109**, tổng **1019**; số trip **18 / 4 / 4**, tổng **26**.
-- `report/verify.txt`: tạo bằng `python3 scripts/check_submission.py --save-verify` (phải có `27/27 checks passed`).
-- Ảnh chụp trong `report/screenshots/`: `airflow_graph.png`, `minio_lake.png`, `metabase_dashboard.png`, và ảnh bài tập sập/chạy lại (log task đỏ thấy trip của bạn).
+- [report/verify.txt](report/verify.txt): đầu ra verify thực tế **27/27 checks passed**, lưu bằng lệnh Docker tương đương `scripts/lab.sh verify` trên PowerShell.
+- [Graph baseline](report/screenshots/airflow_graph.png), [MinIO lake](report/screenshots/minio_lake.png), [Metabase dashboard](report/screenshots/metabase_dashboard.png), [log task đỏ](report/screenshots/fail_task_log.png), [Graph sau phục hồi](report/screenshots/airflow_retry_graph.png).
 
 ## Bước 1 · Bronze
 
@@ -91,7 +91,22 @@ Cụ thể, `publish.export_dataset` sắp xếp theo `frame_id`, băm các dòn
 ### Câu 8
 Đọc phần `lineage` trong `manifest.json` của dataset bạn. Trả lời "dataset này được tạo từ dữ liệu nào?" bằng chính nội dung đó. Nếu một người hỏi 3 tháng sau, thông tin nào giúp tái tạo lại đúng dataset này?
 
-(trả lời ở đây)
+Manifest thật ở **`s3://lake/gold/datasets/00c5f985d775/manifest.json`**, có bản lưu [manifest.json](report/evidence/manifest.json) từ lượt cuối. Lineage ghi:
+
+| Bảng nguồn | Delta version |
+|---|---:|
+| bronze.raw_telemetry_a | 0 |
+| bronze.raw_telemetry_b | 0 |
+| bronze.trips_raw | 0 |
+| bronze.video_files | 1 |
+| silver.frames | 25 |
+| silver.telemetry | 0 |
+| silver.frames_flagged | 0 |
+| silver.frame_telemetry | 0 |
+
+`input_video_sha256` nhận diện video A **`636ba1a98dfc5ba665d1c935e1d2064e69f4df360ff9ffbd15795957d5e7e9aa`**, B **`bfa62703f645ff77a8578ae3fc74a00881140d38a404d43c8e2af265bbee9fdc`**. Dataset dùng ảnh trích từ hai video này, metadata trip và telemetry chuẩn hóa/đã chỉnh clock offset, ghép event time; quy tắc drop là `is_black`, `is_blurry`, `is_near_dup`, `not sync_ok`, split theo trip và phân tầng theo drive. `manifest_sha256` của manifest Parquet là **`f6c6075f33ebf2002c3425716424b74919f9018644a4c0f4ef826d716de686ed`**.
+
+Để tái tạo sau 3 tháng cần giữ file nguồn khớp [data/MANIFEST.json](data/MANIFEST.json), các snapshot Delta hoặc dữ liệu đủ để dựng lại, commit mã nguồn, môi trường thư viện, ngưỡng dbt, lấy mẫu **2 fps**, clock offset B **1500 ms** và MSSV **`2A202602682`**. Version bảng chỉ có ý nghĩa trong lịch sử của cùng lake; reset xóa lịch sử, nên manifest đơn lẻ không thay thế bản lưu dữ liệu. Version `silver.frames=25` là 26 lần ghi trip, đếm từ 0; lượt thí nghiệm trước đó có thêm overwrite nhưng nội dung frame/split và dataset_version vẫn giống nhau.
 
 ## Bước 5 · Điều phối và phục vụ
 
