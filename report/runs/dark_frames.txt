@@ -1,0 +1,4 @@
+drive_id  flagged_dark  dark_in_gold
+--------  ------------  ------------
+drive_a   4             4           
+drive_b   61            58          

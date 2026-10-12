@@ -1,0 +1,59 @@
+{
+  "student_id": "2A202602682",
+  "dag": {
+    "conf": {},
+    "dag_id": "day09_reset",
+    "dag_run_id": "manual__lab_reset_crash_2A202602682_20261012T132041",
+    "data_interval_end": "2026-10-12T13:20:43.685298+00:00",
+    "data_interval_start": "2026-10-12T13:20:43.685298+00:00",
+    "end_date": "2026-10-12T13:20:47.304130+00:00",
+    "execution_date": "2026-10-12T13:20:43.685298+00:00",
+    "external_trigger": true,
+    "last_scheduling_decision": "2026-10-12T13:20:47.301848+00:00",
+    "logical_date": "2026-10-12T13:20:43.685298+00:00",
+    "note": null,
+    "run_type": "manual",
+    "start_date": "2026-10-12T13:20:44.338060+00:00",
+    "state": "success"
+  },
+  "task_instances": [
+    {
+      "dag_id": "day09_reset",
+      "dag_run_id": "manual__lab_reset_crash_2A202602682_20261012T132041",
+      "duration": 2.333294,
+      "end_date": "2026-10-12T13:20:46.948314+00:00",
+      "execution_date": "2026-10-12T13:20:43.685298+00:00",
+      "executor": null,
+      "executor_config": "{}",
+      "hostname": "58cd75f48cbf",
+      "map_index": -1,
+      "max_tries": 0,
+      "note": null,
+      "operator": "BashOperator",
+      "pid": 181,
+      "pool": "default_pool",
+      "pool_slots": 1,
+      "priority_weight": 1,
+      "queue": "default",
+      "queued_when": "2026-10-12T13:20:44.373967+00:00",
+      "rendered_fields": {
+        "bash_command": "cd /opt/*** && /home/airflow/***-venv/bin/python -m pipeline.cli reset && rm -f /opt/work/lakehouse.duckdb /opt/work/.failed-*",
+        "cwd": null,
+        "env": null
+      },
+      "rendered_map_index": null,
+      "sla_miss": null,
+      "start_date": "2026-10-12T13:20:44.615020+00:00",
+      "state": "success",
+      "task_display_name": "reset_lake",
+      "task_id": "reset_lake",
+      "trigger": null,
+      "triggerer_job": null,
+      "try_number": 1,
+      "unixname": "airflow"
+    }
+  ],
+  "state_counts": {
+    "success": 1
+  }
+}

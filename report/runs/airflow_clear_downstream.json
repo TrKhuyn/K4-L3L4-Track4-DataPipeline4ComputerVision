@@ -1,0 +1,67 @@
+{
+  "request": {
+    "dag_run_id": "manual__lab_crash_2A202602682_20261012T132041",
+    "task_ids": [
+      "dbt_run_silver",
+      "dbt_test_silver",
+      "dbt_run_gold",
+      "dbt_test_gold",
+      "publish_lake",
+      "export_dataset",
+      "publish_warehouse"
+    ],
+    "only_failed": true,
+    "include_downstream": false,
+    "include_upstream": false,
+    "include_past": false,
+    "include_future": false,
+    "reset_dag_runs": true,
+    "dry_run": false
+  },
+  "response": {
+    "task_instances": [
+      {
+        "dag_id": "day09_video_pipeline",
+        "dag_run_id": "manual__lab_crash_2A202602682_20261012T132041",
+        "execution_date": "2026-10-12T13:20:49.886743+00:00",
+        "task_id": "dbt_run_silver"
+      },
+      {
+        "dag_id": "day09_video_pipeline",
+        "dag_run_id": "manual__lab_crash_2A202602682_20261012T132041",
+        "execution_date": "2026-10-12T13:20:49.886743+00:00",
+        "task_id": "dbt_test_silver"
+      },
+      {
+        "dag_id": "day09_video_pipeline",
+        "dag_run_id": "manual__lab_crash_2A202602682_20261012T132041",
+        "execution_date": "2026-10-12T13:20:49.886743+00:00",
+        "task_id": "dbt_run_gold"
+      },
+      {
+        "dag_id": "day09_video_pipeline",
+        "dag_run_id": "manual__lab_crash_2A202602682_20261012T132041",
+        "execution_date": "2026-10-12T13:20:49.886743+00:00",
+        "task_id": "dbt_test_gold"
+      },
+      {
+        "dag_id": "day09_video_pipeline",
+        "dag_run_id": "manual__lab_crash_2A202602682_20261012T132041",
+        "execution_date": "2026-10-12T13:20:49.886743+00:00",
+        "task_id": "publish_lake"
+      },
+      {
+        "dag_id": "day09_video_pipeline",
+        "dag_run_id": "manual__lab_crash_2A202602682_20261012T132041",
+        "execution_date": "2026-10-12T13:20:49.886743+00:00",
+        "task_id": "export_dataset"
+      },
+      {
+        "dag_id": "day09_video_pipeline",
+        "dag_run_id": "manual__lab_crash_2A202602682_20261012T132041",
+        "execution_date": "2026-10-12T13:20:49.886743+00:00",
+        "task_id": "publish_warehouse"
+      }
+    ]
+  }
+}

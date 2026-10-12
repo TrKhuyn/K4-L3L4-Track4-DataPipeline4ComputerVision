@@ -1,0 +1,21 @@
+{
+  "student_id": "2A202602682",
+  "failed_trip": "trip-07774",
+  "map_index": 20,
+  "run_id": "manual__lab_crash_2A202602682_20261012T132041",
+  "before_counts": {
+    "upstream_failed": 7,
+    "success": 29,
+    "failed": 1
+  },
+  "after_partition_only_counts": {
+    "upstream_failed": 7,
+    "success": 30
+  },
+  "final_counts": {
+    "success": 37
+  },
+  "initially_successful_tasks": 29,
+  "initially_successful_tasks_not_rerun": true,
+  "retried_extract_try_number": 2
+}

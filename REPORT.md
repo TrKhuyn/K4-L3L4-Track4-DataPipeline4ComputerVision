@@ -98,21 +98,76 @@ Cụ thể, `publish.export_dataset` sắp xếp theo `frame_id`, băm các dòn
 ### Câu 9
 Mô tả chính xác điều xảy ra khi trip của bạn sập rồi chạy lại: bao nhiêu task chuyển đỏ, bao nhiêu task `upstream_failed`, bạn clear gì, dữ liệu có nhân đôi không, `dataset_version` có đổi không? Bằng chứng (ảnh, số) là gì?
 
-(trả lời ở đây)
+Đặt `LAB_FAIL_ONCE=trip-07774`, chạy `day09_reset` rồi `day09_video_pipeline`. Lượt baseline đã xanh **37/37 task instance** (**26** `silver_frames` và **11** task khác). Lượt mô phỏng có **1 task đỏ**: `silver_frames`, **map_index=20**, log ghi **`simulated crash while extracting trip-07774; run it again`**; **7** downstream `upstream_failed`, **29** task thành công. [Ảnh log](report/screenshots/fail_task_log.png) và [Graph lỗi](report/screenshots/airflow_failed_graph.png) ghi đúng trip và trạng thái.
+
+Đầu tiên chỉ clear task đỏ: API preview xác nhận đúng **1** task được clear, giữ `include_upstream=false`, `include_downstream=false`. Trip chạy lại thành công, nhưng Airflow **2.10.5** vẫn giữ **7** task `upstream_failed`, DAG lại failed với **30 success / 7 upstream_failed**; khác với kỳ vọng “chỉ clear đỏ là xanh” của GUIDE. Sau đó clear trạng thái của đúng **7 task downstream chưa từng chạy** (`dbt_run_silver`, `dbt_test_silver`, `dbt_run_gold`, `dbt_test_gold`, `publish_lake`, `export_dataset`, `publish_warehouse`) để chúng thực thi lần đầu, không reset lake hoặc chạy lại Bronze/25 trip tốt.
+
+Cuối cùng DAG xanh **37/37** ([Graph sau xử lý](report/screenshots/airflow_retry_graph.png)). [airflow_recovery.json](report/runs/airflow_recovery.json) đối chiếu start/end time và try number: **29 task thành công ban đầu không chạy lại**, task lỗi đạt **try_number=2**. Dữ liệu sau phục hồi vẫn **1246 frame Silver**, **1019 frame Gold**, `dataset_version` **`00c5f985d775`**, giống baseline; [verify sau phục hồi](report/runs/recovery_verify.txt) đạt **27/27**. Đã bỏ `LAB_FAIL_ONCE` trước lượt chạy cuối; các request clear và snapshot trạng thái được lưu trong `report/runs/airflow_*.json`.
 
 ### Câu 10
 Nâng từ 2 drive lên **500 xe mỗi ngày**: ba thành phần nào của pipeline này sẽ vỡ đầu tiên, và bạn thay bằng gì (nối với slide 12, 22, 23)?
 
-(trả lời ở đây)
+Đây là dự đoán từ kiến trúc lab, chưa phải kết quả benchmark 500 xe; thứ tự nghẽn thực tế còn phụ thuộc thời lượng video và tải truy vấn. Liên hệ các chủ đề kiến trúc phân tán, ELT và xử lý ở quy mô lớn của bài học:
+
+| Thành phần | Giới hạn quan sát từ repo | Hướng thay đổi |
+|---|---|---|
+| Worker trích frame / Airflow LocalExecutor | Một container, parallelism 2 và chỉ 1 `silver_frames` chạy trong mỗi DAG run; mỗi trip lại tải toàn bộ video | Chạy FFmpeg theo trip trên nhiều worker, cache/video range phù hợp; dùng [CeleryExecutor và hàng đợi](https://airflow.apache.org/docs/apache-airflow-providers-celery/stable/celery_executor.html), vẫn giữ retry theo trip và giới hạn ghi Delta để tránh xung đột |
+| dbt + DuckDB trên một máy | Transform và join cùng phụ thuộc file `work/lakehouse.duckdb`, CPU/RAM của một container | Chuyển xử lý bảng lớn sang [Spark với các executor trên cluster](https://spark.apache.org/docs/latest/cluster-overview.html); tính toán theo ngày/xe/trip và incremental, giữ quality gate trước Gold |
+| MinIO một node / một volume | Video, ảnh JPG và Delta đều dùng ổ của một máy, nhiều object nhỏ tạo áp lực I/O; lỗi node ảnh hưởng cả lake | Dùng object storage phân tán, ví dụ [MinIO nhiều node/nhiều ổ](https://min.io/docs/minio/linux/operations/install-deploy-manage/deploy-minio-multi-node-multi-drive.html); compact file Delta, quản lý vòng đời ảnh và chỉ đưa mart cần thiết sang warehouse |
 
 ## Câu hỏi riêng của bạn trên Metabase
 
 Câu SQL bạn thêm vào dashboard và điều nó cho biết:
 
-(trả lời ở đây)
+Câu hỏi: **drive nào có tỷ lệ frame được giữ thấp hơn, để ưu tiên điều tra chất lượng đầu vào?** Đã thêm card “Khuyến: tỷ lệ frame giữ lại theo drive” trên [dashboard cục bộ](http://localhost:3000/dashboard/2).
+
+```sql
+SELECT drive_id,
+       SUM(frames) AS frames_total,
+       SUM(frames_kept) AS frames_kept,
+       SUM(frames) - SUM(frames_kept) AS frames_dropped,
+       ROUND(100.0 * SUM(frames_kept) / NULLIF(SUM(frames), 0), 2) AS kept_pct
+FROM marts.mart_trip_summary
+GROUP BY drive_id
+ORDER BY drive_id;
+```
+
+| Drive | Tổng | Giữ | Loại | Tỷ lệ giữ |
+|---|---:|---:|---:|---:|
+| drive_a | 602 | 436 | 166 | 72,43% |
+| drive_b | 644 | 583 | 61 | 90,53% |
+
+A cần được ưu tiên điều tra: tỷ lệ giữ thấp hơn B **18,10 điểm phần trăm**. Đây là số frame bị loại duy nhất tính bằng tổng trừ giữ, tránh cộng các cờ bị chồng lấn. Kết quả truy vấn và ID card lưu tại [metabase_questions.json](report/runs/metabase_questions.json), SQL tại [retention_by_drive.sql](report/sql/retention_by_drive.sql).
+
+### Bonus: câu hỏi vận hành thứ hai
+
+**Năm trip nào mất tỷ lệ frame lớn nhất để kiểm tra log, ảnh và chất lượng cảm biến trước?** Card “Khuyến: 5 trip cần điều tra chất lượng” dùng truy vấn:
+
+```sql
+SELECT drive_id, trip_id, lighting, conditions, avg_speed_kmh,
+       frames, frames_kept, frames - frames_kept AS frames_dropped,
+       ROUND(100.0 * (frames - frames_kept) / NULLIF(frames, 0), 2) AS dropped_pct
+FROM marts.mart_trip_summary
+ORDER BY dropped_pct DESC, trip_id
+LIMIT 5;
+```
+
+| Trip (đều drive_a) | Loại / tổng | Tỷ lệ loại | Tốc độ TB (km/h) |
+|---|---:|---:|---:|
+| trip-04622 | 34 / 60 | 56,67% | 67,1 |
+| trip-03904 | 11 / 22 | 50,00% | 46,1 |
+| trip-02086 | 28 / 60 | 46,67% | 17,6 |
+| trip-08888 | 24 / 60 | 40,00% | 6,5 |
+| trip-07774 | 13 / 34 | 38,24% | 12,8 |
+
+Ưu tiên `trip-04622`: mất hơn một nửa frame dù tốc độ trung bình cao; không thể quy mọi trường hợp trùng cho xe chạy chậm. Cần mở frame và cờ chất lượng để xác định nguyên nhân, vì query mart này chỉ xếp mức độ mất dữ liệu, không chứng minh lỗi camera. SQL lưu tại [trips_to_investigate.sql](report/sql/trips_to_investigate.sql); bonus không thay đổi cấu hình pipeline chính.
 
 ## Nhìn lại
 
 Điều bạn thấy bất ngờ nhất, điều gì còn chưa rõ, và một lỗi dữ liệu mà bạn nghĩ pipeline **chưa** bắt được (nếu có). Tối đa 8 dòng.
 
-(trả lời ở đây)
+Quan sát đáng chú ý: B có **61 frame tối** nhưng giữ thực sự **58** trong Gold; “tối” không đồng nghĩa với “xấu”, còn 3 frame bị loại bởi các cờ khác.
+A có 4 frame tối và giữ đủ 4 ([truy vấn](report/runs/dark_frames.txt)).
+Chưa có cơ sở chọn ngưỡng dHash tối ưu nếu chỉ nhìn số frame; cần kiểm tra ảnh, vận tốc và tác động lên mô hình.
+Các quality gate hiện chưa kiểm tra đầy đủ miền GPS, gia tốc, hướng và bàn đạp; tốc độ hợp lệ vẫn có thể đi kèm tọa độ sai.
+Chia theo trip chưa loại hết rò rỉ nếu hai trip khác nhau đi qua cùng cảnh; nên kiểm tra thêm theo tuyến đường và thời gian ghi nhận.

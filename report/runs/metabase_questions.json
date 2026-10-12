@@ -1,0 +1,90 @@
+{
+  "student_id": "2A202602682",
+  "dashboard_id": 2,
+  "dashboard_url": "http://localhost:3000/dashboard/2",
+  "questions": [
+    {
+      "name": "Khuyến: tỷ lệ frame giữ lại theo drive",
+      "card_id": 46,
+      "sql": "SELECT drive_id,\n       SUM(frames) AS frames_total,\n       SUM(frames_kept) AS frames_kept,\n       SUM(frames) - SUM(frames_kept) AS frames_dropped,\n       ROUND(100.0 * SUM(frames_kept) / NULLIF(SUM(frames), 0), 2) AS kept_pct\nFROM marts.mart_trip_summary\nGROUP BY drive_id\nORDER BY drive_id;\n",
+      "rows": [
+        {
+          "drive_id": "drive_a",
+          "frames_total": 602,
+          "frames_kept": 436,
+          "frames_dropped": 166,
+          "kept_pct": 72.43
+        },
+        {
+          "drive_id": "drive_b",
+          "frames_total": 644,
+          "frames_kept": 583,
+          "frames_dropped": 61,
+          "kept_pct": 90.53
+        }
+      ]
+    },
+    {
+      "name": "Khuyến: 5 trip cần điều tra chất lượng",
+      "card_id": 47,
+      "sql": "SELECT drive_id, trip_id, lighting, conditions, avg_speed_kmh,\n       frames, frames_kept, frames - frames_kept AS frames_dropped,\n       ROUND(100.0 * (frames - frames_kept) / NULLIF(frames, 0), 2) AS dropped_pct\nFROM marts.mart_trip_summary\nORDER BY dropped_pct DESC, trip_id\nLIMIT 5;\n",
+      "rows": [
+        {
+          "drive_id": "drive_a",
+          "trip_id": "trip-04622",
+          "lighting": "Day",
+          "conditions": "Clouds",
+          "avg_speed_kmh": 67.1,
+          "frames": 60,
+          "frames_kept": 26,
+          "frames_dropped": 34,
+          "dropped_pct": 56.67
+        },
+        {
+          "drive_id": "drive_a",
+          "trip_id": "trip-03904",
+          "lighting": "Day",
+          "conditions": "Clouds",
+          "avg_speed_kmh": 46.1,
+          "frames": 22,
+          "frames_kept": 11,
+          "frames_dropped": 11,
+          "dropped_pct": 50.0
+        },
+        {
+          "drive_id": "drive_a",
+          "trip_id": "trip-02086",
+          "lighting": "Day",
+          "conditions": "Clouds",
+          "avg_speed_kmh": 17.6,
+          "frames": 60,
+          "frames_kept": 32,
+          "frames_dropped": 28,
+          "dropped_pct": 46.67
+        },
+        {
+          "drive_id": "drive_a",
+          "trip_id": "trip-08888",
+          "lighting": "Day",
+          "conditions": "Clouds",
+          "avg_speed_kmh": 6.5,
+          "frames": 60,
+          "frames_kept": 36,
+          "frames_dropped": 24,
+          "dropped_pct": 40.0
+        },
+        {
+          "drive_id": "drive_a",
+          "trip_id": "trip-07774",
+          "lighting": "Day",
+          "conditions": "Clouds",
+          "avg_speed_kmh": 12.8,
+          "frames": 34,
+          "frames_kept": 21,
+          "frames_dropped": 13,
+          "dropped_pct": 38.24
+        }
+      ]
+    }
+  ]
+}
